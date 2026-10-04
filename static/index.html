@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Video Opportunity Analyzer</title>
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/vendor/chart.umd.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>YouTube Video Opportunity Analyzer</h1>
+  <p class="tagline">raw input → data collection → mathematical calculation → AI audit (GLM‑5.3) → final decision → published result → feedback → calibration</p>
+  <p class="disclaimer"><strong>Honesty rules:</strong> this tool produces an <em>evidence-based opportunity score</em>. It is <u>not</u> a probability of going viral, it does not reproduce YouTube's private recommendation algorithm, and monetization figures are scenarios, not promises.</p>
+</header>
+
+<div class="layout">
+  <aside id="sidebar">
+    <div class="side-block">
+      <h2>Projects</h2>
+      <ul id="project-list"></ul>
+      <button id="new-project-btn" class="btn ghost">+ New project</button>
+    </div>
+    <nav class="side-block pipeline-nav">
+      <h2>Pipeline</h2>
+      <ol id="stage-nav">
+        <li data-stage="project">1 · Project</li>
+        <li data-stage="trends">2 · Trends</li>
+        <li data-stage="competitors">3 · Competitors</li>
+        <li data-stage="titles">4 · Titles</li>
+        <li data-stage="thumbnail">5 · Thumbnail</li>
+        <li data-stage="structure">6 · Structure</li>
+        <li data-stage="monetization">7 · Monetization</li>
+        <li data-stage="engine">8 · Math engine</li>
+        <li data-stage="ai">9 · AI audit</li>
+        <li data-stage="decision">10 · Decision</li>
+        <li data-stage="learning">11 · Learning loop</li>
+      </ol>
+    </nav>
+    <div class="side-block">
+      <h2>Settings</h2>
+      <div id="token-status" class="muted"></div>
+      <input id="hf-token" type="password" placeholder="Hugging Face API token (HF_TOKEN)" autocomplete="off">
+      <button id="save-token" class="btn ghost small">Save token locally</button>
+    </div>
+  </aside>
+
+  <main id="content">
+    <!-- STAGE 1: PROJECT -->
+    <section class="stage" id="stage-project">
+      <h2>INPUT 1 — Project <span class="chip out">OUTPUT 1: normalized project context</span></h2>
+      <form id="project-form" class="grid2">
+        <label>Project name* <input name="name" required placeholder="AI Electricity Demand"></label>
+        <label>Main topic <input name="topic" placeholder="AI electricity demand"></label>
+        <label>Target audience <input name="audience" placeholder="English-speaking global technology/business audience"></label>
+        <label>Country / market <input name="market" placeholder="Worldwide"></label>
+        <label>Language <input name="language" placeholder="English" value="English"></label>
+        <label>Category <input name="category" placeholder="Technology / Business"></label>
+        <label>Intended video format <input name="format" placeholder="8–10 minute faceless documentary"></label>
+        <label>Differentiation rating (0–100, how distinct your angle is) <input name="differentiation_rating" type="number" min="0" max="100" placeholder="80"></label>
+        <label class="full">Notes <textarea name="notes" rows="2" placeholder="Research notes, hypotheses…"></textarea></label>
+        <div class="full"><button class="btn primary" type="submit">Save project context</button></div>
+      </form>
+    </section>
+
+    <!-- STAGE 2: TRENDS -->
+    <section class="stage hidden" id="stage-trends">
+      <h2>INPUT 2 — Trend Terms <span class="chip out">OUTPUT 2: trend report + momentum 0–100</span></h2>
+      <div class="grid2">
+        <form id="term-form">
+          <label>Add term (max 5) <input name="term" placeholder="AI electricity"></label>
+          <label>Geo (blank = worldwide) <input name="geo" placeholder="united_states"></label>
+          <button class="btn" type="submit">Add term</button>
+        </form>
+        <div>
+          <div id="terms-chips"></div>
+          <div class="row">
+            <button id="trends-open" class="btn ghost">Open Google Trends comparison ↗</button>
+            <button id="trends-embed" class="btn ghost">Embed comparison graph</button>
+          </div>
+        </div>
+      </div>
+      <h3>PROCESS 2 — import exported Trends CSV</h3>
+      <div class="grid2">
+        <div>
+          <input type="file" id="csv-file" accept=".csv,text/csv">
+          <textarea id="csv-paste" rows="6" placeholder="…or paste the raw Google Trends 'Interest over time' CSV export here"></textarea>
+          <button id="import-csv" class="btn primary">Parse &amp; calculate metrics</button>
+        </div>
+        <iframe id="trends-frame" title="Google Trends embedded comparison" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+      </div>
+      <div id="trend-report" class="report"></div>
+      <canvas id="trend-chart" height="120"></canvas>
+    </section>
+
+    <!-- STAGE 3: COMPETITORS -->
+    <section class="stage hidden" id="stage-competitors">
+      <h2>INPUT 3 — Competitors <span class="chip out">OUTPUT 3: competition report</span></h2>
+      <form id="comp-form" class="grid3">
+        <label>Video title <input name="title"></label>
+        <label>Channel <input name="channel"></label>
+        <label>Subscribers <input name="subscribers" type="number" min="0"></label>
+        <label>Total views <input name="views" type="number" min="0"></label>
+        <label>Upload date <input name="upload_date" type="date"></label>
+        <label>Likes <input name="likes" type="number" min="0"></label>
+        <label>Comments <input name="comments" type="number" min="0"></label>
+        <label>Channel typical views (optional) <input name="channel_typical_views" type="number" min="0"></label>
+        <div><button class="btn primary" type="submit">Add competitor</button></div>
+      </form>
+      <div id="comp-table"></div>
+      <button id="refresh-comp" class="btn ghost">Recalculate competition report</button>
+      <div id="comp-report" class="report"></div>
+    </section>
+
+    <!-- STAGE 4: TITLES -->
+    <section class="stage hidden" id="stage-titles">
+      <h2>INPUT 4 — Candidate Titles <span class="chip out">OUTPUT 4: ranked title report</span></h2>
+      <label>Titles (one per line) <textarea id="titles-input" rows="4" placeholder="AI Doesn't Need More Chips. It Needs Electricity.&#10;The AI Boom Has a Power Problem"></textarea></label>
+      <div id="title-links" class="grid2"></div>
+      <details>
+        <summary>Optional quality ratings per title (clarity, curiosity, stakes, novelty, relevance, readability 0–100)</summary>
+        <div id="title-ratings"></div>
+        <p class="muted">If left blank the system uses transparent structural heuristics and labels them as estimates.</p>
+      </details>
+      <button id="analyze-titles" class="btn primary">Analyze titles (PROCESS 4)</button>
+      <div id="title-report" class="report"></div>
+    </section>
+
+    <!-- STAGE 5: THUMBNAIL -->
+    <section class="stage hidden" id="stage-thumbnail">
+      <h2>INPUT 5 — Thumbnail Concept <span class="chip out">OUTPUT 5: thumbnail score 0–100</span></h2>
+      <form id="thumb-form" class="grid3">
+        <label class="full">Main visual subject <input name="subject" placeholder="GPU/server + electricity transmission lines"></label>
+        <label>Thumbnail text <input name="thumb_text" placeholder="POWER?"></label>
+        <label>Emotional signal <input name="emotion" placeholder="urgency / surprise"></label>
+        <label>Image path (optional manual review) <input name="image_path" placeholder="/images/thumb_v1.png"></label>
+        <label>Contrast (0–100) <input name="contrast" type="number" min="0" max="100"></label>
+        <label>Simplicity (0–100) <input name="simplicity" type="number" min="0" max="100"></label>
+        <label>Mobile readability (0–100) <input name="mobile_readability" type="number" min="0" max="100"></label>
+        <label>Low text burden (0–100) <input name="text_load" type="number" min="0" max="100"></label>
+        <label>Title–thumbnail complementarity (0–100) <input name="complementarity" type="number" min="0" max="100"></label>
+        <label>Curiosity (0–100) <input name="curiosity" type="number" min="0" max="100"></label>
+        <label>Visual hierarchy (0–100) <input name="hierarchy" type="number" min="0" max="100"></label>
+        <label>Specificity (0–100) <input name="specificity" type="number" min="0" max="100"></label>
+        <div><button class="btn primary" type="submit">Score thumbnail (PROCESS 5)</button></div>
+      </form>
+      <div id="thumb-report" class="report"></div>
+    </section>
+
+    <!-- STAGE 6: STRUCTURE -->
+    <section class="stage hidden" id="stage-structure">
+      <h2>INPUT 6 — Video Structure <span class="chip out">OUTPUT 6: retention report 0–100</span></h2>
+      <form id="struct-form" class="grid5"></form>
+      <div id="struct-report" class="report"></div>
+    </section>
+
+    <!-- STAGE 7: MONETIZATION -->
+    <section class="stage hidden" id="stage-monetization">
+      <h2>INPUT 7 — Monetization Factors <span class="chip out">OUTPUT 7: revenue scenarios</span></h2>
+      <p class="muted">These are scenario assumptions, never guaranteed income.</p>
+      <form id="mon-form" class="grid3">
+        <label>Niche / commercial category
+          <select name="niche">
+            <option value="technology_software">Technology / software</option>
+            <option value="ai_datacenter">AI / data center</option>
+            <option value="finance_investing">Finance / investing</option>
+            <option value="business">Business</option>
+            <option value="education_explainer">Education / explainer</option>
+            <option value="entertainment">Entertainment</option>
+            <option value="gaming">Gaming</option>
+            <option value="health">Health</option>
+            <option value="autos">Autos</option>
+            <option value="general">General</option>
+          </select>
+        </label>
+        <label>Estimated RPM (USD) <input name="rpm" type="number" step="0.1" min="0"></label>
+        <label>Expected monthly long-form views <input name="monthly_views" type="number" min="0"></label>
+        <label>Affiliate CTR % <input name="affiliate_ctr" type="number" step="0.1" min="0"></label>
+        <label>Affiliate conversion % <input name="affiliate_conv" type="number" step="0.1" min="0"></label>
+        <label>Commission per conversion (USD) <input name="commission" type="number" step="0.5" min="0"></label>
+        <label>Sponsorship estimate (USD) <input name="sponsorship" type="number" min="0"></label>
+        <label>Other revenue estimate (USD) <input name="other_revenue" type="number" min="0"></label>
+        <div><button class="btn primary" type="submit">Calculate scenarios (PROCESS 7)</button></div>
+      </form>
+      <div id="mon-report" class="report"></div>
+    </section>
+
+    <!-- STAGE 8: ENGINE -->
+    <section class="stage hidden" id="stage-engine">
+      <h2>INPUT 8 — All Project Data → PROCESS 8: Mathematical Opportunity Engine <span class="chip out">OUTPUT 8: preliminary decision</span></h2>
+      <button id="run-engine" class="btn primary big">Run deterministic scoring engine</button>
+      <div id="engine-report" class="report"></div>
+      <canvas id="radar-chart" height="260"></canvas>
+    </section>
+
+    <!-- STAGE 9: AI -->
+    <section class="stage hidden" id="stage-ai">
+      <h2>INPUT 9 — AI Analysis Request <span class="chip out">OUTPUT 9: GLM‑5.3 audit</span></h2>
+      <p class="muted">The complete structured project JSON is sent from this local Flask server to the Hugging Face OpenAI-compatible router using model <code>zai-org/GLM-5.3:novita</code>. The AI independently reviews the numbers; its judgment stays separate from the deterministic math.</p>
+      <button id="run-ai" class="btn primary big">Request AI audit (PROCESS 9)</button>
+      <div id="ai-report" class="report"></div>
+    </section>
+
+    <!-- STAGE 10: DECISION -->
+    <section class="stage hidden" id="stage-decision">
+      <h2>INPUT 10 — Final Decision <span class="chip out">OUTPUT 10: production decision</span></h2>
+      <label>Your research notes (feeds synthesis) <textarea id="user-notes" rows="3"></textarea></label>
+      <button id="run-decision" class="btn primary big">Synthesize production decision (PROCESS 10)</button>
+      <div id="decision-report" class="report"></div>
+      <div class="row">
+        <a id="export-json" class="btn ghost" href="#">Export full JSON</a>
+        <a id="export-brief" class="btn ghost" href="#">Export production brief (.txt)</a>
+      </div>
+    </section>
+
+    <!-- STAGE 11: LEARNING -->
+    <section class="stage hidden" id="stage-learning">
+      <h2>INPUT 11 — Publication Results <span class="chip out">OUTPUT 11: channel-specific model</span></h2>
+      <form id="pub-form" class="grid3">
+        <label>Days since upload <input name="days_since_upload" type="number" min="0"></label>
+        <label>Impressions <input name="impressions" type="number" min="0"></label>
+        <label>CTR % <input name="ctr" type="number" step="0.1" min="0"></label>
+        <label>Views <input name="views" type="number" min="0"></label>
+        <label>Avg view duration (seconds) <input name="avg_view_duration_sec" type="number" min="0"></label>
+        <label>Video length (seconds) <input name="video_length_sec" type="number" min="0"></label>
+        <label>Avg percentage viewed % <input name="avg_pct_viewed" type="number" step="0.1" min="0"></label>
+        <label>Retention milestones (free text) <input name="retention_milestones" placeholder="30s:82%, 60s:71%…"></label>
+        <label>Returning viewers % <input name="returning_viewers_pct" type="number" step="0.1" min="0"></label>
+        <label>Traffic sources <input name="traffic_sources" placeholder="Suggested 54%, Browse 21%, Search 12%"></label>
+        <label>Subscribers gained <input name="subscribers_gained" type="number" min="0"></label>
+        <label>Revenue (USD) <input name="revenue" type="number" step="0.01" min="0"></label>
+        <div><button class="btn primary" type="submit">Record result &amp; learn (PROCESS 11)</button></div>
+      </form>
+      <div id="pub-report" class="report"></div>
+      <h3>Current model state</h3>
+      <div id="model-state" class="report"></div>
+    </section>
+  </main>
+</div>
+
+<template id="row-del"><button class="del btn danger tiny">×</button></template>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
